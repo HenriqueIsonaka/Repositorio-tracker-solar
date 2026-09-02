@@ -13,12 +13,13 @@
 #define ADC_CHANNEL_ID_L   12// PTB 2 --3
 #define ADC_CHANNEL_ID_O   13//PTB 3 --4
 #define ADC_VREF_MV   3300
-#define DELAY_LDR_MS   300 // a ser definido
+#define DELAY_LDR_MS   500 // a ser definido
 #define TPM_MODULE 7500
-#define margem_LDR 50 // a ser definido
+#define margem_LDR 110 // a ser definido
 #define Delay_Leitura 2000 // a ser definido
-#define Noite   3000 // a ser definido
+#define Noite   1400 // a ser definido
 #define Tempo_dormir  15000
+#define DELAY_viradona_MS 1000 
 
 static int16_t sample_buffer_N;
 static int16_t sample_buffer_S;
@@ -29,14 +30,16 @@ static int16_t sample_buffer_O;
 uint16_t zero = TPM_MODULE*0.025; //0,5ms
 uint16_t meio = TPM_MODULE*0.075; //1,5ms -> noventa graus
 uint16_t max = TPM_MODULE*0.125; //2,5ms
-uint16_t descanso =TPM_MODULE*0.058; //1ms-> quarenta e cinco graus
+uint16_t descanso = TPM_MODULE*0.058; // sessenta graus
+uint16_t outdesc = TPM_MODULE*0.091; // cento e vinte graus
 uint16_t movimento_t = TPM_MODULE*0.058; //sessenta graus
 uint16_t movimento_b = TPM_MODULE*0.075; //noventa graus
-uint16_t mexida= TPM_MODULE*0.001;//mexer muito pouco: 0,72 graus
+uint16_t mexida= TPM_MODULE*0.001;//mexer muito pouco: 1,8 graus
 
 int main(void) {
 
-    const struct device *adc_dev = DEVICE_DT_GET(DT_NODELABEL(adc0)); //configuração dos ldrs
+    const struct device *adc_dev = DEVICE_DT_GET(DT_NODELABEL(adc0));
+
     if(!device_is_ready(adc_dev)) {
         printk("ADC não está pronto\n");
         return 1;
@@ -109,7 +112,7 @@ int main(void) {
         .buffer_size = sizeof(sample_buffer_O),
         .resolution = ADC_RESOLUTION,
     };
-    pwm_tpm_Init(TPM1, TPM_PLLFLL, TPM_MODULE, TPM_CLK, PS_128, EDGE_PWM);// inicialização do pwm para servomotores
+    pwm_tpm_Init(TPM1, TPM_PLLFLL, TPM_MODULE, TPM_CLK, PS_128, EDGE_PWM);
     pwm_tpm_Init(TPM0, TPM_PLLFLL, TPM_MODULE, TPM_CLK, PS_128, EDGE_PWM);
     pwm_tpm_Ch_Init(TPM1, 0, TPM_PWM_H, GPIOA, 12); //PTA12-> servo da base
     pwm_tpm_Ch_Init(TPM0, 0, TPM_PWM_H, GPIOC, 1);// PTC1-> servo do topo
@@ -123,6 +126,7 @@ int main(void) {
         int err2 = adc_read(adc_dev, &sequence2);
         int err3 = adc_read(adc_dev, &sequence3);
         int err4 = adc_read(adc_dev, &sequence4);
+       
         if (err1 !=0) {
             printk("Falha na leitura do ADC: %d\n", err1);
         }
@@ -136,58 +140,85 @@ int main(void) {
             printk("Falha na leitura do ADC: %d\n", err4);
         }
         else {
-            int32_t Nmv = sample_buffer_N; //leitura ldrs
+            int32_t Nmv = sample_buffer_N;
             int32_t Smv = sample_buffer_S;
             int32_t Lmv = sample_buffer_L;
             int32_t Omv = sample_buffer_O;
-            adc_raw_to_millivolts (ADC_VREF_MV, ADC_GAIN, ADC_RESOLUTION, &Nmv); 
+            adc_raw_to_millivolts (ADC_VREF_MV, ADC_GAIN, ADC_RESOLUTION, &Nmv);
             adc_raw_to_millivolts (ADC_VREF_MV, ADC_GAIN, ADC_RESOLUTION, &Smv);
             adc_raw_to_millivolts (ADC_VREF_MV, ADC_GAIN, ADC_RESOLUTION, &Lmv);
             adc_raw_to_millivolts (ADC_VREF_MV, ADC_GAIN, ADC_RESOLUTION, &Omv);
 
-            uint32_t VN = Nmv-Smv; //conversão em valores para comparações
+            uint32_t VN = Nmv-Smv;
             uint32_t VS = Smv;
             uint32_t VL = Lmv-Omv;
             uint32_t VO = Omv;
 
-            printk("ADC Norte: %d (raw), %d mV\n", sample_buffer_N, VN); // impressão dos valores lidos
+            printk("ADC Norte: %d (raw), %d mV\n", sample_buffer_N, VN);
             printk("ADC Sul: %d (raw), %d mV\n", sample_buffer_S, VS);
             printk("ADC Leste: %d (raw), %d mV\n", sample_buffer_L, VL);
             printk("ADC Oeste: %d (raw), %d mV\n", sample_buffer_O, VO);
             printk("\n");
-//
-            if(VL> VO+margem_LDR && movimento_b<max && movimento_b>zero) { //vai para oeste
-                if(movimento_t> meio) {
+
+            if(VL> VO+margem_LDR) { //vai para oeste
+                if(movimento_t> meio && movimento_b<max) {
                     movimento_b = movimento_b+ mexida;
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_LDR_MS);
                 }
-                else if(movimento_t< meio) {
+                else if(movimento_t> meio && movimento_b>=max) {
+                    movimento_t = descanso;
+                    movimento_b = zero+mexida;
+                    pwm_tpm_CnV(TPM0, 0, movimento_t);
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
+                }
+                else if(movimento_t< meio && movimento_b>zero) {
                     movimento_b = movimento_b- mexida;
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_LDR_MS);
+                }
+                else if(movimento_t< meio && movimento_b<=zero) {
+                    movimento_t = outdesc;
+                    movimento_b = max-mexida;
+                    pwm_tpm_CnV(TPM0, 0, movimento_t);
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
                 }
             }
-            else if(VO> VL+margem_LDR && movimento_b<max && movimento_b>zero) { //vai para leste
-                if(movimento_t> meio) {
+            else if(VO> VL+margem_LDR) { //vai para leste
+                if(movimento_t> meio && movimento_b>zero) {
                     movimento_b = movimento_b- mexida;
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_LDR_MS);
                 }
-                else if(movimento_t< meio) {
+                else if(movimento_t> meio && movimento_b<=zero) {
+                    movimento_t = descanso;
+                    movimento_b = max-mexida;
+                    pwm_tpm_CnV(TPM0, 0, movimento_t);
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
+                }
+                else if(movimento_t< meio && movimento_b<max) {
                     movimento_b = movimento_b+ mexida;
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_LDR_MS);
                 }
-            }  
-//          
-            else if(VN> VS+margem_LDR && movimento_t<max && movimento_t>zero) { //vai para sul
+                else if(movimento_t < meio && movimento_b>=max) {
+                    movimento_t = outdesc;
+                    movimento_b = zero+mexida;
+                    pwm_tpm_CnV(TPM0, 0, movimento_t);
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
+                }
+            }
+
+            else if(VN> VS+margem_LDR) { //vai para sul
                 movimento_t = movimento_t - mexida;
                 pwm_tpm_CnV(TPM0, 0, movimento_t);
                 k_msleep(DELAY_LDR_MS);
             }
-
-            else if(VS> VN+margem_LDR && movimento_t<max && movimento_t>zero) { //vai para norte
+            else if(VS> VN+margem_LDR) { //vai para norte
                 movimento_t = movimento_t + mexida;
                 pwm_tpm_CnV(TPM0, 0, movimento_t);
                 k_msleep(DELAY_LDR_MS);
@@ -195,7 +226,7 @@ int main(void) {
             else {
                 k_msleep(Delay_Leitura);
             }
-            if(VN+VS> Noite) {
+            if(VN> Noite && VS>Noite) {
                 pwm_tpm_CnV(TPM0, 0, descanso);
                 k_msleep(1000);
                 pwm_tpm_CnV(TPM1, 0, meio);
@@ -215,4 +246,13 @@ int main(void) {
 // Motor base: PTA 12
 // Motor topo: PTC 1
 // Lembrar de definir posição dos LDR com base nas posições de descanso
-// resistor em conjunto com o LDR: 10kohms
+// iiii: dicotomia não dá certo: precisão variável, horrível para ajustes pequenos.
+// iiii: varredura no eixo-leste oeste?-> não daria certo, sol (aparentemente) pode variar de norte ao sul durante o dia e muitas varreduras
+// iiii: movimento único-> problema: sol norte sul
+// iiii: otimização do código
+// iiii:resolver tranco trocando entrada
+// iiiii: ajustar margem ldr norte e sul
+// iiiiiii: ajustar noite e margem ldr
+
+
+
