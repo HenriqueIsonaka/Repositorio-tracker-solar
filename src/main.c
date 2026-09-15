@@ -38,6 +38,8 @@ uint16_t mexida= TPM_MODULE*0.001;//mexer muito pouco: 1,8 graus
 
 int main(void) {
 
+    // bool travada = false;
+
     const struct device *adc_dev = DEVICE_DT_GET(DT_NODELABEL(adc0));
 
     if(!device_is_ready(adc_dev)) {
@@ -167,11 +169,17 @@ int main(void) {
                     k_msleep(DELAY_LDR_MS);
                 }
                 else if(movimento_t> meio && movimento_b>=max) {
+                    movimento_t = meio;
+                    movimento_b = meio;
+                    pwm_tpm_CnV(TPM0, 0, movimento_t);
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
                     movimento_t = descanso;
                     movimento_b = zero+mexida;
                     pwm_tpm_CnV(TPM0, 0, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_viradona_MS);
+                    //travada = true;
                 }
                 else if(movimento_t< meio && movimento_b>zero) {
                     movimento_b = movimento_b- mexida;
@@ -179,11 +187,17 @@ int main(void) {
                     k_msleep(DELAY_LDR_MS);
                 }
                 else if(movimento_t< meio && movimento_b<=zero) {
+                    movimento_t = meio;
+                    movimento_b = meio;
+                    pwm_tpm_CnV(TPM0, 0, movimento_t);
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
                     movimento_t = outdesc;
                     movimento_b = max-mexida;
                     pwm_tpm_CnV(TPM0, 0, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_viradona_MS);
+                    //travada = true;
                 }
             }
             else if(VO> VL+margem_LDR) { //vai para leste
@@ -193,11 +207,17 @@ int main(void) {
                     k_msleep(DELAY_LDR_MS);
                 }
                 else if(movimento_t> meio && movimento_b<=zero) {
+                    movimento_t = meio;
+                    movimento_b = meio;
+                    pwm_tpm_CnV(TPM0, 0, movimento_t);
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
                     movimento_t = descanso;
                     movimento_b = max-mexida;
                     pwm_tpm_CnV(TPM0, 0, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_viradona_MS);
+                    //travada = true;
                 }
                 else if(movimento_t< meio && movimento_b<max) {
                     movimento_b = movimento_b+ mexida;
@@ -205,11 +225,17 @@ int main(void) {
                     k_msleep(DELAY_LDR_MS);
                 }
                 else if(movimento_t < meio && movimento_b>=max) {
+                    movimento_t = meio;
+                    movimento_b = meio;
+                    pwm_tpm_CnV(TPM0, 0, movimento_t);
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
                     movimento_t = outdesc;
                     movimento_b = zero+mexida;
                     pwm_tpm_CnV(TPM0, 0, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_viradona_MS);
+                    //travada = true;
                 }
             }
 
@@ -225,6 +251,7 @@ int main(void) {
             }
             else {
                 k_msleep(Delay_Leitura);
+                //travada = false;
             }
             if(VN> Noite && VS>Noite) {
                 pwm_tpm_CnV(TPM0, 0, descanso);
@@ -244,15 +271,14 @@ int main(void) {
 // Sensor Leste: PTB 2 -amarelo
 // Sensor Oeste: PTB 3 -dourado
 // Motor base: PTA 12
-// Motor topo: PTC 1
+// Motor topo: PTC 1->trocar por tranco
 // Lembrar de definir posição dos LDR com base nas posições de descanso
-// iiii: dicotomia não dá certo: precisão variável, horrível para ajustes pequenos.
-// iiii: varredura no eixo-leste oeste?-> não daria certo, sol (aparentemente) pode variar de norte ao sul durante o dia e muitas varreduras
-// iiii: movimento único-> problema: sol norte sul
 // iiii: otimização do código
-// iiii:resolver tranco trocando entrada
-// iiiii: ajustar margem ldr norte e sul
-// iiiiiii: ajustar noite e margem ldr
+// aaaaa:resolver tranco inicial trocando entrada
+// eeeee: ajustar margem ldr norte e sul
+// eeeee: ajustar noite e margem ldr
+// ccccc:resolver viradona-> se retornar para viradona ele trava na posição
+// ccccc: quebrar movimento de viradona em dois forçando ele para a posição de meio
 
 
 
