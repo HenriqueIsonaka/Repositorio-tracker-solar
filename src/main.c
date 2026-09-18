@@ -38,7 +38,8 @@ uint16_t mexida= TPM_MODULE*0.001;//mexer muito pouco: 1,8 graus
 
 int main(void) {
 
-    // bool travada = false;
+    int travada = 0;
+    uint16_t salvo_t;
 
     const struct device *adc_dev = DEVICE_DT_GET(DT_NODELABEL(adc0));
 
@@ -192,7 +193,7 @@ int main(void) {
                 k_msleep(Tempo_dormir);
             }
 
-            if(VL> VO+margem_dinLO) { //vai para oeste
+            if(VL> VO+margem_dinLO && travada < 2) { //vai para oeste
                 if(movimento_t> meio && movimento_b<max) {
                     movimento_b = movimento_b+ mexida;
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
@@ -204,12 +205,16 @@ int main(void) {
                     k_msleep(DELAY_LDR_MS);
                 }
                 else if(movimento_t> meio && movimento_b>=max) {
+                    salvo_t = movimento_t;
                     movimento_t = meio;
-                    movimento_b = meio;
+                    movimento_b = outdesc;
                     pwm_tpm_CnV(TPM0, 2, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_viradona_MS);
-                    movimento_t = descanso;
+                    movimento_b = descanso;
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
+                    movimento_t = max - salvo_t + zero;
                     movimento_b = zero+mexida;
                     pwm_tpm_CnV(TPM0, 2, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
@@ -219,7 +224,7 @@ int main(void) {
                     printk("Posição servo topo: %d graus\n", posicaoT);
                     printk("\n");
                     k_msleep(DELAY_viradona_MS);
-                    //travada = true;
+                    travada++;
                 }
                 else if(movimento_t< meio && movimento_b>zero) {
                     movimento_b = movimento_b- mexida;
@@ -232,12 +237,16 @@ int main(void) {
                     k_msleep(DELAY_LDR_MS);
                 }
                 else if(movimento_t< meio && movimento_b<=zero) {
+                    salvo_t = movimento_t;
                     movimento_t = meio;
-                    movimento_b = meio;
+                    movimento_b = descanso;
                     pwm_tpm_CnV(TPM0, 2, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_viradona_MS);
-                    movimento_t = outdesc;
+                    movimento_b = outdesc;
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
+                    movimento_t = max - salvo_t + zero;
                     movimento_b = max-mexida;
                     pwm_tpm_CnV(TPM0, 2, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
@@ -247,10 +256,10 @@ int main(void) {
                     printk("Posição servo topo: %d graus\n", posicaoT);
                     printk("\n");
                     k_msleep(DELAY_viradona_MS);
-                    //travada = true;
+                    travada++;
                 }
             }
-            else if(VO> VL+margem_dinLO) { //vai para leste
+            else if(VO> VL+margem_dinLO && travada < 2) { //vai para leste
                 if(movimento_t> meio && movimento_b>zero) {
                     movimento_b = movimento_b- mexida;
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
@@ -262,12 +271,16 @@ int main(void) {
                     k_msleep(DELAY_LDR_MS);
                 }
                 else if(movimento_t> meio && movimento_b<=zero) {
+                    salvo_t = movimento_t;
                     movimento_t = meio;
-                    movimento_b = meio;
+                    movimento_b = descanso;
                     pwm_tpm_CnV(TPM0, 2, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_viradona_MS);
-                    movimento_t = descanso;
+                    movimento_b = outdesc;
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
+                    movimento_t = max - salvo_t + zero;
                     movimento_b = max-mexida;
                     pwm_tpm_CnV(TPM0, 2, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
@@ -277,7 +290,7 @@ int main(void) {
                     printk("Posição servo topo: %d graus\n", posicaoT);
                     printk("\n");
                     k_msleep(DELAY_viradona_MS);
-                    //travada = true;
+                    travada++;
                 }
                 else if(movimento_t< meio && movimento_b<max) {
                     movimento_b = movimento_b+ mexida;
@@ -290,12 +303,16 @@ int main(void) {
                     k_msleep(DELAY_LDR_MS);
                 }
                 else if(movimento_t < meio && movimento_b>=max) {
+                    salvo_t = movimento_t;
                     movimento_t = meio;
-                    movimento_b = meio;
+                    movimento_b = outdesc;
                     pwm_tpm_CnV(TPM0, 2, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
                     k_msleep(DELAY_viradona_MS);
-                    movimento_t = outdesc;
+                    movimento_b = descanso;
+                    pwm_tpm_CnV(TPM1, 0, movimento_b);
+                    k_msleep(DELAY_viradona_MS);
+                    movimento_t = max - salvo_t + zero;
                     movimento_b = zero+mexida;
                     pwm_tpm_CnV(TPM0, 2, movimento_t);
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
@@ -305,7 +322,7 @@ int main(void) {
                     printk("Posição servo topo: %d graus\n", posicaoT);
                     printk("\n");
                     k_msleep(DELAY_viradona_MS);
-                    //travada = true;
+                    travada++;
                 }
             }
 
@@ -336,7 +353,7 @@ int main(void) {
                 printk("Posição servo topo: %d graus\n", posicaoT);
                 printk("\n");
                 k_msleep(Delay_Leitura);
-                //travada = false;
+                travada = 0;// libera o viradona
             }
         }
     }
