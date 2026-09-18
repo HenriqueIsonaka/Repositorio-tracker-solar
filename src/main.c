@@ -15,7 +15,7 @@
 #define ADC_VREF_MV   3300
 #define DELAY_LDR_MS   500 // a ser definido
 #define TPM_MODULE 7500
-#define margem_LDR 150 // a ser definido
+#define margem_LDR 100 // a ser definido
 #define Delay_Leitura 2000 // a ser definido
 #define Noite   200 // a ser definido
 #define Tempo_dormir  15000
@@ -118,9 +118,11 @@ int main(void) {
     pwm_tpm_Init(TPM0, TPM_PLLFLL, TPM_MODULE, TPM_CLK, PS_128, EDGE_PWM);
     pwm_tpm_Ch_Init(TPM1, 0, TPM_PWM_H, GPIOA, 12); //PTA12-> servo da base
     pwm_tpm_Ch_Init(TPM0, 2, TPM_PWM_H, GPIOA, 5);// PTA5-> servo do topo
-    pwm_tpm_CnV(TPM1, 0, meio);
+    movimento_b = meio;
+    movimento_t = descanso;
+    pwm_tpm_CnV(TPM1, 0, movimento_b);
     k_msleep(2000);
-    pwm_tpm_CnV(TPM0, 2, meio);
+    pwm_tpm_CnV(TPM0, 2, movimento_t);
     uint16_t posicaoB = (movimento_b - zero)*0.24;
     uint16_t posicaoT = (movimento_t - zero)*0.24;
     printk("Posição servo base: %d graus\n",posicaoB);
@@ -167,6 +169,8 @@ int main(void) {
             printk("ADC Leste: %d (raw), %d mV\n", sample_buffer_L, VL);
             printk("ADC Oeste: %d (raw), %d mV\n", sample_buffer_O, VO);
             printk("\n");
+
+            //uint32_t margem_din = (3300 - VL)
             
             
             if(VN < Noite && VS < Noite) {
@@ -348,3 +352,4 @@ int main(void) {
 // ccccc:resolver viradona-> se retornar para viradona ele trava na posição
 // ccccc: quebrar movimento de viradona em dois forçando ele para a posição de meio
 // ccccc: ajustar para o circuito novo
+// ccccc: margem dinamica
