@@ -159,7 +159,7 @@ int main(void) {
             adc_raw_to_millivolts (ADC_VREF_MV, ADC_GAIN, ADC_RESOLUTION, &Lmv);
             adc_raw_to_millivolts (ADC_VREF_MV, ADC_GAIN, ADC_RESOLUTION, &Omv);
 
-            uint32_t VN = Smv;// leitura adc le o resistor e nao o ldr
+            uint32_t VN = Smv;// leitura adc le o resistor e nao o ldr: invertido
             uint32_t VS = Nmv;
             uint32_t VL = Omv;
             uint32_t VO = Lmv;
@@ -170,8 +170,12 @@ int main(void) {
             printk("ADC Oeste: %d (raw), %d mV\n", sample_buffer_O, VO);
             printk("\n");
 
-            //uint32_t margem_din = (3300 - VL)
-            
+            uint32_t margem_dinNS = (6600 - VN - VS)/26;
+            uint32_t margem_dinLO = (6600 - VL - VO)/33;
+
+            printk("Margem NS: %d\n", margem_dinNS);
+            printk("Margem LO: %d\n", margem_dinLO);
+            printk("\n");
             
             if(VN < Noite && VS < Noite) {
                 movimento_t = descanso;
@@ -188,7 +192,7 @@ int main(void) {
                 k_msleep(Tempo_dormir);
             }
 
-            if(VL> VO+margem_LDR) { //vai para oeste
+            if(VL> VO+margem_dinLO) { //vai para oeste
                 if(movimento_t> meio && movimento_b<max) {
                     movimento_b = movimento_b+ mexida;
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
@@ -246,7 +250,7 @@ int main(void) {
                     //travada = true;
                 }
             }
-            else if(VO> VL+margem_LDR) { //vai para leste
+            else if(VO> VL+margem_dinLO) { //vai para leste
                 if(movimento_t> meio && movimento_b>zero) {
                     movimento_b = movimento_b- mexida;
                     pwm_tpm_CnV(TPM1, 0, movimento_b);
@@ -305,7 +309,7 @@ int main(void) {
                 }
             }
 
-            else if(VN> VS+margem_LDR) { //vai para sul
+            else if(VN> VS+margem_dinNS) { //vai para sul
                 movimento_t = movimento_t - mexida;
                 pwm_tpm_CnV(TPM0, 2, movimento_t);
                 posicaoB = (movimento_b - zero)*0.24;
@@ -315,7 +319,7 @@ int main(void) {
                 printk("\n");
                 k_msleep(DELAY_LDR_MS);
             }
-            else if(VS> VN+margem_LDR) { //vai para norte
+            else if(VS> VN+margem_dinNS) { //vai para norte
                 movimento_t = movimento_t + mexida;
                 pwm_tpm_CnV(TPM0, 2, movimento_t);
                 posicaoB = (movimento_b - zero)*0.24;
